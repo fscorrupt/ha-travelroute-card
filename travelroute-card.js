@@ -237,7 +237,7 @@ class TravelrouteCard extends HTMLElement {
             <label>To</label>
             <input type="date" id="rc-to" value="${toInputDate(now)}">
             <button class="btn btn-default-days" id="rc-btn-default">Last ${cfg.default_days}d</button>
-            <button class="btn btn-primary" id="rc-btn-load">Load ↺</button>
+            <button class="btn btn-primary" id="rc-btn-load">Load <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:2px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
           </div>
         </div>
         <div id="map-container">
