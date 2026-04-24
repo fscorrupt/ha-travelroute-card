@@ -314,9 +314,11 @@ class TravelrouteCard extends HTMLElement {
       const endIso   = new Date(toVal   + 'T23:59:59').toISOString();
 
       let points = [];
+      let rawHistoryCount = 0;
       if (this._config.entity) {
         // Single entity mode (device_tracker or geocoded location)
         const history = await this._fetchHistory(this._config.entity, startIso, endIso);
+        rawHistoryCount = history.length;
         points = this._parseSingleEntityHistory(history);
       } else {
         // Dual entity mode
@@ -324,10 +326,13 @@ class TravelrouteCard extends HTMLElement {
           this._fetchHistory(this._config.lat_entity, startIso, endIso),
           this._fetchHistory(this._config.lon_entity,  startIso, endIso),
         ]);
+        rawHistoryCount = Math.min(latHistory.length, lonHistory.length);
         points = this._mergeHistory(latHistory, lonHistory);
       }
 
-      if (points.length < 2) throw new Error('Not enough data points in the selected time range');
+      if (points.length < 2) {
+        throw new Error(\`Not enough data points in the selected time range. Found \${rawHistoryCount} raw history records, but only \${points.length} had valid coordinates.\`);
+      }
 
       // Detect park stops
       const stops = this._findStops(points, this._config.park_threshold_min);
