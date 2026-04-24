@@ -304,6 +304,7 @@ class TravelrouteCard extends HTMLElement {
     this._showOverlay('Fetching position data…');
     this._clearStats();
 
+    let hasError = false;
     try {
       const fromVal = this.shadowRoot.getElementById('rc-from').value;
       const toVal   = this.shadowRoot.getElementById('rc-to').value;
@@ -342,10 +343,11 @@ class TravelrouteCard extends HTMLElement {
       this._showStats(distanceKm, stops, points);
 
     } catch (err) {
+      hasError = true;
       this._showError(err.message || String(err));
     } finally {
       this._loading = false;
-      this._hideOverlay();
+      if (!hasError) this._hideOverlay();
     }
   }
 
