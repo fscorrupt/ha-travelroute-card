@@ -22,9 +22,11 @@ A custom [Home Assistant](https://www.home-assistant.io/) Lovelace card that vis
 ## Requirements
 
 - Home Assistant with the History integration enabled (enabled by default)
-- Two sensor entities that record latitude and longitude — one value each, updated whenever the vehicle moves. Examples:
-  - `sensor.my_car_position_latitude`
-  - `sensor.my_car_position_longitude`
+- **Either**:
+  - A single entity (e.g., `device_tracker` or geocoded location sensor) that contains location data in its attributes (like `latitude`/`longitude` or a `location` array).
+  - **Or** two sensor entities that record latitude and longitude as their state — one value each, updated whenever the vehicle moves. Examples:
+    - `sensor.my_car_position_latitude`
+    - `sensor.my_car_position_longitude`
 - Internet access from the browser (Leaflet CSS/JS and OSRM are loaded from CDN)
 
 ---
@@ -42,9 +44,9 @@ A custom [Home Assistant](https://www.home-assistant.io/) Lovelace card that vis
 
 ### HACS (manual repository)
 
-1. Open **HACS → Frontend**.
+1. Open **HACS**.
 2. Click the three-dot menu → **Custom repositories**.
-3. Add `https://github.com/onceuponatime78/ha-travelroute-card` with category **Lovelace**.
+3. Add `https://github.com/fscorrupt/ha-travelroute-card` with category **Dashboard** (or **Lovelace** in older versions).
 4. Search for "Travel Route Card" and install it.
 5. Clear your browser cache and reload.
 
@@ -56,16 +58,19 @@ Add the card to your dashboard via the Lovelace YAML editor or the card picker.
 
 ```yaml
 type: custom:travelroute-card
-lat_entity: sensor.my_car_position_latitude
-lon_entity: sensor.my_car_position_longitude
+entity: device_tracker.my_car
+# OR use two separate sensors:
+# lat_entity: sensor.my_car_position_latitude
+# lon_entity: sensor.my_car_position_longitude
 ```
 
 ### Options
 
 | Option               | Type    | Default          | Description                                              |
 |----------------------|---------|------------------|----------------------------------------------------------|
-| `lat_entity`         | string  | **required**     | Entity ID of the latitude sensor                         |
-| `lon_entity`         | string  | **required**     | Entity ID of the longitude sensor                        |
+| `entity`             | string  |                  | Entity ID of a device tracker or sensor with location attributes. **Requires either this OR `lat_entity`/`lon_entity`.** |
+| `lat_entity`         | string  |                  | Entity ID of the latitude sensor.                        |
+| `lon_entity`         | string  |                  | Entity ID of the longitude sensor.                       |
 | `title`              | string  | `Travel Route`   | Card title displayed in the header                       |
 | `default_days`       | number  | `7`              | Number of days to load by default                        |
 | `park_threshold_min` | number  | `15`             | Minimum gap in minutes between positions to count as a stop |
@@ -111,4 +116,4 @@ Both dependencies are loaded at runtime from a CDN. No bundling or build step is
 
 ## License
 
-MIT © [onceuponatime78](https://github.com/onceuponatime78)
+MIT © [fscorrupt](https://github.com/fscorrupt)
