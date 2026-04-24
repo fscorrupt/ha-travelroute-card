@@ -69,10 +69,18 @@ class TravelrouteCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config.lat_entity) throw new Error('lat_entity is required');
-    if (!config.lon_entity) throw new Error('lon_entity is required');
+    let entity = config.entity;
+    // Fallback: if user provided the same entity for both lat and lon
+    if (!entity && config.lat_entity && config.lon_entity && config.lat_entity === config.lon_entity) {
+      entity = config.lat_entity;
+    }
+
+    if (!entity && (!config.lat_entity || !config.lon_entity)) {
+      throw new Error('Please provide either "entity" (with location attributes) OR both "lat_entity" and "lon_entity"');
+    }
     this._config = {
       title:              config.title              || 'Travel Route',
+      entity:             entity,
       lat_entity:         config.lat_entity,
       lon_entity:         config.lon_entity,
       default_days:       config.default_days       || 7,
@@ -304,13 +312,20 @@ class TravelrouteCard extends HTMLElement {
       const startIso = new Date(fromVal + 'T00:00:00').toISOString();
       const endIso   = new Date(toVal   + 'T23:59:59').toISOString();
 
-      // Fetch HA History for both entities in parallel
-      const [latHistory, lonHistory] = await Promise.all([
-        this._fetchHistory(this._config.lat_entity, startIso, endIso),
-        this._fetchHistory(this._config.lon_entity,  startIso, endIso),
-      ]);
+      let points = [];
+      if (this._config.entity) {
+        // Single entity mode (device_tracker or geocoded location)
+        const history = await this._fetchHistory(this._config.entity, startIso, endIso);
+        points = this._parseSingleEntityHistory(history);
+      } else {
+        // Dual entity mode
+        const [latHistory, lonHistory] = await Promise.all([
+          this._fetchHistory(this._config.lat_entity, startIso, endIso),
+          this._fetchHistory(this._config.lon_entity,  startIso, endIso),
+        ]);
+        points = this._mergeHistory(latHistory, lonHistory);
+      }
 
-      const points = this._mergeHistory(latHistory, lonHistory);
       if (points.length < 2) throw new Error('Not enough data points in the selected time range');
 
       // Detect park stops
@@ -341,6 +356,47 @@ class TravelrouteCard extends HTMLElement {
     // Returns array of arrays; first inner array is the requested entity
     if (!res || !res[0]) return [];
     return res[0].filter(s => s.state !== 'unavailable' && s.state !== 'unknown');
+  }
+
+  // ── Parse single entity history with attributes ───────────────────────────────
+  _parseSingleEntityHistory(history) {
+    const all = [];
+    for (const s of history) {
+      if (!s.attributes) continue;
+      let lat = null, lon = null;
+      
+      if (s.attributes.latitude !== undefined && s.attributes.longitude !== undefined) {
+        lat = parseFloat(s.attributes.latitude);
+        lon = parseFloat(s.attributes.longitude);
+      } else if (s.attributes.location) {
+        let loc = s.attributes.location;
+        if (typeof loc === 'string') {
+          const parts = loc.split(',');
+          if (parts.length >= 2) {
+            lat = parseFloat(parts[0]);
+            lon = parseFloat(parts[1]);
+          }
+        } else if (Array.isArray(loc) && loc.length >= 2) {
+          lat = parseFloat(loc[0]);
+          lon = parseFloat(loc[1]);
+        }
+      }
+      
+      if (lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
+        all.push({ time: new Date(s.last_changed), lat, lon });
+      }
+    }
+
+    // Remove identical consecutive positions
+    const deduped = [];
+    for (const p of all) {
+      if (deduped.length === 0) { deduped.push(p); continue; }
+      const prev = deduped[deduped.length - 1];
+      if (Math.abs(p.lat - prev.lat) > 0.0001 || Math.abs(p.lon - prev.lon) > 0.0001) {
+        deduped.push(p);
+      }
+    }
+    return deduped.sort((a, b) => a.time - b.time);
   }
 
   // ── Merge lat/lon histories by matching timestamps ────────────────────────────
@@ -545,8 +601,7 @@ class TravelrouteCard extends HTMLElement {
 
   static getStubConfig() {
     return {
-      lat_entity:         'sensor.your_vehicle_position_latitude',
-      lon_entity:         'sensor.your_vehicle_position_longitude',
+      entity:             'device_tracker.your_vehicle',
       default_days:       7,
       park_threshold_min: 15,
       title:              'Travel Route',
