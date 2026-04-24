@@ -368,30 +368,44 @@ class TravelrouteCard extends HTMLElement {
   // ── Parse single entity history with attributes ───────────────────────────────
   _parseSingleEntityHistory(history) {
     const all = [];
+    let noAttrCount = 0;
+
     for (const s of history) {
-      if (!s.attributes) continue;
+      if (!s.attributes || Object.keys(s.attributes).length === 0) {
+        noAttrCount++;
+        continue;
+      }
       let lat = null, lon = null;
       
-      if (s.attributes.latitude !== undefined && s.attributes.longitude !== undefined) {
-        lat = parseFloat(s.attributes.latitude);
-        lon = parseFloat(s.attributes.longitude);
-      } else if (s.attributes.location) {
-        let loc = s.attributes.location;
-        if (typeof loc === 'string') {
-          const parts = loc.split(',');
+      const latAttr = s.attributes.latitude !== undefined ? s.attributes.latitude : s.attributes.Latitude;
+      const lonAttr = s.attributes.longitude !== undefined ? s.attributes.longitude : s.attributes.Longitude;
+      const locAttr = s.attributes.location !== undefined ? s.attributes.location : s.attributes.Location;
+      
+      if (latAttr !== undefined && lonAttr !== undefined) {
+        lat = parseFloat(latAttr);
+        lon = parseFloat(lonAttr);
+      } else if (locAttr !== undefined && locAttr !== null) {
+        if (Array.isArray(locAttr) && locAttr.length >= 2) {
+          lat = parseFloat(locAttr[0]);
+          lon = parseFloat(locAttr[1]);
+        } else {
+          let locStr = String(locAttr).replace(/[()[\]\s]/g, '');
+          const parts = locStr.split(',');
           if (parts.length >= 2) {
             lat = parseFloat(parts[0]);
             lon = parseFloat(parts[1]);
           }
-        } else if (Array.isArray(loc) && loc.length >= 2) {
-          lat = parseFloat(loc[0]);
-          lon = parseFloat(loc[1]);
         }
       }
       
       if (lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
         all.push({ time: new Date(s.last_changed), lat, lon });
       }
+    }
+
+    if (all.length === 0 && history.length > 0) {
+      console.warn("travelroute-card: No valid coordinates found in history. Total records:", history.length, "Records missing attributes:", noAttrCount);
+      console.warn("travelroute-card: Example record:", history[0]);
     }
 
     // Remove identical consecutive positions
