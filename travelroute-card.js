@@ -331,7 +331,7 @@ class TravelrouteCard extends HTMLElement {
       }
 
       if (points.length < 2) {
-        throw new Error(\`Not enough data points in the selected time range. Found \${rawHistoryCount} raw history records, but only \${points.length} had valid coordinates.\`);
+        throw new Error(`Not enough data points in the selected time range. Found ${rawHistoryCount} raw history records, but only ${points.length} had valid coordinates.`);
       }
 
       // Detect park stops
